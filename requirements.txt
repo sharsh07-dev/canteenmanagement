@@ -1,2 +1,4 @@
 Django==6.0.3
 whitenoise==6.6.0
+crispy-bootstrap5==2026.3
+django-crispy-forms==2.6
