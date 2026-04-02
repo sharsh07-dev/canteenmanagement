@@ -59,13 +59,29 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'canteen.wsgi.application'
 
-# Database - SQLite for easy setup, comment out for MySQL
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'canteen_billing.db',
+# Database - SQLite
+import shutil
+
+# If running on Vercel, we must copy the SQLite DB to the writable /tmp folder
+if 'VERCEL' in os.environ or os.environ.get('VERCEL_URL'):
+    db_path = '/tmp/canteen_billing.db'
+    if not os.path.exists(db_path):
+        source_db = BASE_DIR / 'canteen_billing.db'
+        if os.path.exists(source_db):
+            shutil.copy2(source_db, db_path)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': db_path,
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'canteen_billing.db',
+        }
+    }
 
 # MySQL Configuration (uncomment to use MySQL)
 # DATABASES = {
