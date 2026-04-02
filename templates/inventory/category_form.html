@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}{{ action }} Category{% endblock %}
+{% block page_title %}{{ action }} Category{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="page-header">
+        <h1><i class="bi bi-tags"></i> {{ action }} Category</h1>
+        <a href="{% url 'category_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Category Name *</label>
+                                <input type="text" name="name" class="form-control" value="{{ category.name|default:'' }}" required placeholder="e.g. Beverages">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Description</label>
+                                <textarea name="description" class="form-control" rows="2" placeholder="Optional description">{{ category.description|default:'' }}</textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Color</label>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <input type="color" name="color" class="form-control form-control-color" value="{{ category.color|default:'#6366f1' }}">
+                                    <span style="font-size:12px;color:var(--text-muted);">Category color for UI</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Icon (Bootstrap Icon class)</label>
+                                <input type="text" name="icon" class="form-control" value="{{ category.icon|default:'bi-grid' }}" placeholder="bi-grid">
+                                <div class="mt-1" style="font-size:11px;color:var(--text-muted);">
+                                    <a href="https://icons.getbootstrap.com/" target="_blank">Browse icons</a>
+                                </div>
+                            </div>
+                            <div class="col-12 d-flex gap-3 justify-content-end">
+                                <a href="{% url 'category_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle"></i> {{ action }} Category
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

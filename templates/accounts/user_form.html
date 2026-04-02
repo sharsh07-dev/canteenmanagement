@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}{{ action }} User{% endblock %}
+{% block page_title %}{{ action }} User{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="page-header">
+        <h1><i class="bi bi-person-fill-gear"></i> {{ action }} User</h1>
+        <a href="{% url 'user_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            {% if action == 'Create' %}
+                            <div class="col-md-6">
+                                <label class="form-label">Username *</label>
+                                <input type="text" name="username" class="form-control" required>
+                            </div>
+                            {% else %}
+                            <div class="col-md-6">
+                                <label class="form-label">Username</label>
+                                <input type="text" class="form-control" value="{{ target_user.username }}" disabled>
+                            </div>
+                            {% endif %}
+                            <div class="col-md-6">
+                                <label class="form-label">Password {% if action == 'Create' %}*{% else %}(Leave blank to keep current){% endif %}</label>
+                                <input type="password" name="password" class="form-control" {% if action == 'Create' %}required{% endif %}>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">First Name</label>
+                                <input type="text" name="first_name" class="form-control" value="{{ target_user.first_name|default:'' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Last Name</label>
+                                <input type="text" name="last_name" class="form-control" value="{{ target_user.last_name|default:'' }}">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Role *</label>
+                                <select name="role" class="form-select" required>
+                                    <option value="cashier" {% if profile.role == 'cashier' %}selected{% endif %}>Cashier (POS only)</option>
+                                    <option value="manager" {% if profile.role == 'manager' %}selected{% endif %}>Manager (Reports + Inventory)</option>
+                                    <option value="admin" {% if profile.role == 'admin' %}selected{% endif %}>Admin (Full Access)</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Email</label>
+                                <input type="email" name="email" class="form-control" value="{{ target_user.email|default:'' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Phone</label>
+                                <input type="text" name="phone" class="form-control" value="{{ profile.phone|default:'' }}">
+                            </div>
+
+                            <div class="col-12 mt-4 d-flex justify-content-end gap-2">
+                                <a href="{% url 'user_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i> {{ action }} User</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

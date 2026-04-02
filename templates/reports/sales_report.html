@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% block title %}Sales Report{% endblock %}
+{% block page_title %}Sales Report{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="page-header">
+        <h1><i class="bi bi-graph-up-arrow"></i> Sales Report</h1>
+        <a href="{% url 'export_csv' %}?period={{ period }}&start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-success">
+            <i class="bi bi-download"></i> Export CSV
+        </a>
+    </div>
+
+    <!-- Period Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-sm-auto">
+                    <label class="form-label">Period</label>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="?period=daily" class="btn {% if period == 'daily' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Today</a>
+                        <a href="?period=weekly" class="btn {% if period == 'weekly' %}btn-primary{% else %}btn-outline-secondary{% endif %}">This Week</a>
+                        <a href="?period=monthly" class="btn {% if period == 'monthly' %}btn-primary{% else %}btn-outline-secondary{% endif %}">This Month</a>
+                        <a href="?period=custom" class="btn {% if period == 'custom' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Custom</a>
+                    </div>
+                </div>
+                {% if period == 'custom' %}
+                <div class="col-sm-2">
+                    <label class="form-label">From</label>
+                    <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+                </div>
+                <div class="col-sm-2">
+                    <label class="form-label">To</label>
+                    <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+                </div>
+                <div class="col-sm-auto">
+                    <input type="hidden" name="period" value="custom">
+                    <button type="submit" class="btn btn-primary">Apply</button>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card accent">
+                <div class="stat-icon accent"><i class="bi bi-currency-rupee"></i></div>
+                <div class="stat-value">₹{{ summary.total_revenue|default:0|floatformat:0 }}</div>
+                <div class="stat-label">Total Revenue</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card success">
+                <div class="stat-icon success"><i class="bi bi-receipt"></i></div>
+                <div class="stat-value">{{ summary.total_orders|default:0 }}</div>
+                <div class="stat-label">Total Orders</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card warning">
+                <div class="stat-icon warning"><i class="bi bi-calculator"></i></div>
+                <div class="stat-value">₹{{ summary.avg_order|default:0|floatformat:0 }}</div>
+                <div class="stat-label">Avg Order Value</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card info">
+                <div class="stat-icon info"><i class="bi bi-percent"></i></div>
+                <div class="stat-value">₹{{ summary.total_tax|default:0|floatformat:0 }}</div>
+                <div class="stat-label">Total Tax Collected</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <!-- Chart -->
+        <div class="col-xl-8">
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="bi bi-bar-chart me-2"></i>Revenue Trend</span>
+                </div>
+                <div class="card-body">
+                    <canvas id="salesChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Methods -->
+        <div class="col-xl-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <span><i class="bi bi-credit-card me-2"></i>Payment Methods</span>
+                </div>
+                <div class="card-body">
+                    {% for pm in payment_breakdown %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1" style="font-size:13px;">
+                            <span class="text-capitalize">{{ pm.method }}</span>
+                            <span class="fw-bold">₹{{ pm.total|floatformat:0 }}</span>
+                        </div>
+                        <div class="progress" style="height:6px;border-radius:3px;background:var(--bg-tertiary);">
+                            <div class="progress-bar bg-accent" style="width:{{ pm.count }}%;background:var(--accent) !important;border-radius:3px;"></div>
+                        </div>
+                        <div class="text-muted" style="font-size:11px;">{{ pm.count }} transactions</div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted py-4">No payment data for this period.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Items -->
+    <div class="card">
+        <div class="card-header">
+            <span><i class="bi bi-trophy me-2"></i>Top Selling Items</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Item</th>
+                        <th>Category</th>
+                        <th>Qty Sold</th>
+                        <th>Revenue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in top_items %}
+                    <tr>
+                        <td>
+                            <div style="width:28px;height:28px;background:var(--accent-light);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent);">
+                                {{ forloop.counter }}
+                            </div>
+                        </td>
+                        <td><strong>{{ item.item__name }}</strong></td>
+                        <td class="text-muted">{{ item.item__category__name }}</td>
+                        <td><span class="badge bg-success bg-opacity-10 text-success fs-6">{{ item.total_qty }}</span></td>
+                        <td><strong>₹{{ item.total_rev|floatformat:0 }}</strong></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-4 text-muted">No sales in this period</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const labels = {{ chart_labels|safe }};
+const data = {{ chart_data|safe }};
+const ctx = document.getElementById('salesChart').getContext('2d');
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'Revenue (₹)',
+            data: data,
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99,102,241,0.1)',
+            borderWidth: 2.5,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#6366f1',
+            pointRadius: 4,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => '₹' + ctx.raw.toLocaleString('en-IN') } }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: { color: '#8b949e', callback: v => '₹' + v.toLocaleString('en-IN') }
+            },
+            x: { grid: { display: false }, ticks: { color: '#8b949e' } }
+        }
+    }
+});
+</script>
+{% endblock %}

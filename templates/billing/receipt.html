@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receipt #{{ order.order_number }}</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background: #f0f0f0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .receipt {
+            background: #fff;
+            width: 300px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h2 { margin: 0; font-size: 1.2rem; }
+        .header p { margin: 5px 0; font-size: 0.9rem; color: #555; }
+        .divider {
+            border-top: 1px dashed #000;
+            margin: 10px 0;
+        }
+        .item-list { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        .item-list th, .item-list td { font-size: 0.9rem; padding: 4px 0; text-align: left; }
+        .item-list th { border-bottom: 1px dashed #000; padding-bottom: 5px; margin-bottom: 5px; }
+        .item-list td.right { text-align: right; }
+        .totals {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .totals td { text-align: right; font-size: 0.9rem; padding: 2px 0; }
+        .totals td.label { text-align: left; }
+        .totals .grand-total td { font-weight: bold; font-size: 1.1rem; padding-top: 10px; border-top: 1px dashed #000; }
+        .footer { text-align: center; font-size: 0.8rem; margin-top: 20px; }
+        @media print {
+            body { background: #fff; padding: 0; }
+            .receipt { box-shadow: none; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt">
+        <div class="header">
+            <h2>CANTEEN POS</h2>
+            <p>123 University Campus<br>Tel: +1 234 567 8900</p>
+        </div>
+        
+        <div style="font-size: 0.85rem; margin-bottom: 15px;">
+            <div>Order: #{{ order.order_number }}</div>
+            <div>Date: {{ order.created_at|date:"d-M-Y h:i A" }}</div>
+            <div>Cashier: {{ order.cashier.username }}</div>
+        </div>
+
+        <table class="item-list">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Qty</th>
+                    <th class="right">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items.all %}
+                <tr>
+                    <td>{{ item.item.name|truncatechars:18 }}<br><small style="font-size:0.7rem;color:#666;">@ {{ item.unit_price }}</small></td>
+                    <td>{{ item.quantity }}</td>
+                    <td class="right">{% widthratio item.quantity 1 item.unit_price %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="divider"></div>
+
+        <table class="totals">
+            <tr>
+                <td class="label">Subtotal</td>
+                <td>{{ order.subtotal }}</td>
+            </tr>
+            <tr>
+                <td class="label">Tax (Inc.)</td>
+                <td>{{ order.tax_amount }}</td>
+            </tr>
+            {% if order.discount_amount > 0 %}
+            <tr>
+                <td class="label">Discount</td>
+                <td>-{{ order.discount_amount }}</td>
+            </tr>
+            {% endif %}
+            <tr class="grand-total">
+                <td class="label">TOTAL</td>
+                <td>₹{{ order.total_amount }}</td>
+            </tr>
+            <tr>
+                <td class="label">Payment Mode</td>
+                <td style="text-transform: capitalize;">{{ order.payment.method|default:'Cash' }}</td>
+            </tr>
+        </table>
+
+        <div class="divider"></div>
+
+        <div class="footer">
+            <p>Thank you for your visit!</p>
+            <p>Please come again.</p>
+        </div>
+    </div>
+    
+    <script>
+        window.onload = function() {
+            // Uncomment next line to automatically open print dialog
+            // window.print();
+        }
+    </script>
+</body>
+</html>

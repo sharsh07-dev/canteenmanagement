@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% block title %}Inventory Report{% endblock %}
+{% block page_title %}Inventory Report{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="page-header">
+        <h1><i class="bi bi-clipboard-data"></i> Inventory Report</h1>
+        <a href="{% url 'item_list' %}" class="btn btn-outline-secondary"><i class="bi bi-box-seam me-1"></i>Manage Items</a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card accent">
+                <div class="stat-icon accent"><i class="bi bi-box-seam"></i></div>
+                <div class="stat-value">{{ items.count }}</div>
+                <div class="stat-label">Total Items</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card warning">
+                <div class="stat-icon warning"><i class="bi bi-exclamation-triangle"></i></div>
+                <div class="stat-value">{{ low_stock|length }}</div>
+                <div class="stat-label">Low Stock Items</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card danger">
+                <div class="stat-icon warning"><i class="bi bi-x-circle"></i></div>
+                <div class="stat-value">{{ out_of_stock.count }}</div>
+                <div class="stat-label">Out of Stock</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card success">
+                <div class="stat-icon success"><i class="bi bi-currency-rupee"></i></div>
+                <div class="stat-value">₹{{ total_value|floatformat:0 }}</div>
+                <div class="stat-label">Total Stock Value</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Category Summary -->
+        <div class="col-md-5">
+            <div class="card h-100">
+                <div class="card-header"><span><i class="bi bi-tags me-2"></i>Category Summary</span></div>
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Items</th>
+                                <th>Stock</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cat in category_summary %}
+                            <tr>
+                                <td><strong>{{ cat.name }}</strong></td>
+                                <td>{{ cat.active_items|default:0 }}</td>
+                                <td>{{ cat.total_stock|default:0 }}</td>
+                                <td>₹{{ cat.total_value|default:0|floatformat:0 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center text-muted py-3">No categories</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Low Stock Items -->
+        <div class="col-md-7">
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="bi bi-exclamation-triangle me-2 text-warning"></i>Low Stock Items</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Category</th>
+                                <th>Stock</th>
+                                <th>Min Level</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in low_stock %}
+                            <tr>
+                                <td><strong>{{ item.name }}</strong></td>
+                                <td>{{ item.category.name }}</td>
+                                <td>
+                                    <span class="stock-indicator {% if item.stock_quantity == 0 %}out{% else %}low{% endif %}">
+                                        {% if item.stock_quantity == 0 %}<i class="bi bi-x-circle"></i> Out{% else %}<i class="bi bi-exclamation-triangle"></i> {{ item.stock_quantity }}{% endif %}
+                                    </span>
+                                </td>
+                                <td class="text-muted">{{ item.min_stock_level }}</td>
+                                <td>
+                                    <a href="{% url 'stock_adjust' item.id %}" class="btn btn-sm btn-warning">
+                                        <i class="bi bi-plus"></i> Restock
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4">
+                                    <i class="bi bi-check-circle text-success" style="font-size:24px;"></i>
+                                    <div class="mt-2 text-muted">All items are adequately stocked!</div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

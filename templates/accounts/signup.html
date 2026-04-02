@@ -1,0 +1,154 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up | CanteenPOS</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="/static/css/main.css" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: radial-gradient(circle at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.7) 100%), url('{% static "images/bg.jpeg" %}') no-repeat center center fixed;
+            background-size: cover;
+        }
+        .login-card {
+            width: 100%;
+            max-width: 420px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-top: 1px solid rgba(255, 255, 255, 0.4);
+            border-left: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 24px;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            animation: fadeIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+            padding-bottom: 20px;
+            color: #fff;
+        }
+        
+        .login-header {
+            text-align: center;
+            padding: 40px 20px 20px;
+        }
+        .login-icon {
+            width: 72px;
+            height: 72px;
+            background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 36px;
+            margin: 0 auto 20px;
+            box-shadow: 0 10px 30px rgba(0, 114, 255, 0.4);
+        }
+        .input-group-text, .form-control {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-color: rgba(255, 255, 255, 0.2) !important;
+            color: #fff !important;
+            backdrop-filter: blur(5px);
+        }
+        .input-group-text {
+            color: rgba(255, 255, 255, 0.8) !important;
+        }
+        .form-control:focus {
+            background: rgba(255, 255, 255, 0.2) !important;
+            border-color: #00c6ff !important;
+            box-shadow: 0 0 0 3px rgba(0, 198, 255, 0.3) !important;
+        }
+        .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.5) !important;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
+            border: none;
+            box-shadow: 0 4px 15px rgba(0, 114, 255, 0.4);
+            transition: all 0.3s ease;
+            height: 50px;
+            font-size: 16px;
+            border-radius: 12px !important;
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 114, 255, 0.6);
+        }
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active{
+            -webkit-box-shadow: 0 0 0 30px rgba(0,0,0,0.5) inset !important;
+            -webkit-text-fill-color: white !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <div class="login-header">
+        <div class="login-icon"><i class="bi bi-person-plus-fill"></i></div>
+        <h2 style="font-weight:800;letter-spacing:-0.5px;margin-bottom:4px;">CanteenPOS</h2>
+        <p style="color:var(--text-muted);font-size:13px;">Create a cashier account</p>
+    </div>
+    
+    <div style="padding: 0 30px 30px;">
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} p-2" style="font-size:13px;text-align:center;">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+        
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label text-muted">Full Name</label>
+                <div class="input-group">
+                    <span class="input-group-text" style="background:var(--bg-tertiary);border-color:var(--border-color);color:var(--text-muted);"><i class="bi bi-card-text"></i></span>
+                    <input type="text" name="first_name" class="form-control" placeholder="Enter your full name" required autofocus style="border-left:none;">
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-muted">Username</label>
+                <div class="input-group">
+                    <span class="input-group-text" style="background:var(--bg-tertiary);border-color:var(--border-color);color:var(--text-muted);"><i class="bi bi-person"></i></span>
+                    <input type="text" name="username" class="form-control" placeholder="Choose a username" required style="border-left:none;">
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="form-label text-muted">Password</label>
+                <div class="input-group">
+                    <span class="input-group-text" style="background:var(--bg-tertiary);border-color:var(--border-color);color:var(--text-muted);"><i class="bi bi-lock"></i></span>
+                    <input type="password" name="password" class="form-control" placeholder="Create a password" required style="border-left:none;">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" style="border-radius:10px;">
+                Create Account
+            </button>
+            <div class="mt-4 text-center">
+                <p style="font-size: 13px; color: var(--text-muted);">
+                    Already have an account? <a href="{% url 'login' %}" style="color: var(--accent); text-decoration: none; font-weight: 500;">Sign in Here</a>
+                </p>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

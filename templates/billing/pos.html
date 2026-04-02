@@ -1,0 +1,540 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}POS Billing{% endblock %}
+{% block page_title %}POS Billing{% endblock %}
+
+{% block extra_css %}
+<link href="/static/css/pos.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Shortcuts Bar -->
+    <div class="shortcuts-info mb-2">
+        <span class="shortcut-item"><kbd class="kbd">F2</kbd> Search</span>
+        <span class="shortcut-item"><kbd class="kbd">F4</kbd> Checkout</span>
+        <span class="shortcut-item"><kbd class="kbd">Esc</kbd> Clear Cart</span>
+        <span class="shortcut-item"><kbd class="kbd">↑↓</kbd> Navigate</span>
+    </div>
+
+    <div class="pos-wrapper">
+        <!-- Left: Items Panel -->
+        <div class="pos-left">
+            <!-- Search Bar -->
+            <div class="pos-search-bar">
+                <i class="bi bi-search"></i>
+                <input type="text" id="itemSearch" placeholder="Search items by name or barcode... (F2)" autocomplete="off">
+                <kbd class="kbd d-none d-md-block">F2</kbd>
+            </div>
+
+            <!-- Category Pills -->
+            <div class="category-pills">
+                <div class="cat-pill active" data-category="">
+                    <i class="bi bi-grid"></i> All
+                </div>
+                {% for cat in categories %}
+                <div class="cat-pill" data-category="{{ cat.id }}" style="--cat-color: {{ cat.color }}">
+                    <span class="cat-dot" style="background: {{ cat.color }}"></span>
+                    {{ cat.name }}
+                    <span style="font-size:10px;opacity:0.6;">({{ cat.items.count }})</span>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Items Grid -->
+            <div class="items-grid" id="itemsGrid">
+                {% for item in items %}
+                <div class="item-card {% if item.is_low_stock %}border-warning{% endif %}"
+                     data-id="{{ item.id }}"
+                     data-name="{{ item.name }}"
+                     data-price="{{ item.price }}"
+                     data-tax="{{ item.tax_rate }}"
+                     data-stock="{{ item.stock_quantity }}"
+                     data-category="{{ item.category_id }}"
+                     data-barcode="{{ item.barcode|default:'' }}"
+                     onclick="addToCart(this)">
+                    <div class="item-emoji">
+                        {% if item.category.name|lower == 'beverages' %}☕
+                        {% elif item.category.name|lower == 'snacks' %}🍿
+                        {% elif item.category.name|lower == 'meals' or item.category.name|lower == 'food' %}🍱
+                        {% elif item.category.name|lower == 'desserts' %}🍰
+                        {% elif item.category.name|lower == 'breakfast' %}🥞
+                        {% else %}🛒{% endif %}
+                    </div>
+                    <div class="item-name">{{ item.name }}</div>
+                    <div class="item-price">₹{{ item.price }}</div>
+                    <div class="item-stock {% if item.stock_quantity <= 5 %}low{% endif %}">
+                        {% if item.stock_quantity == 0 %}Out of stock
+                        {% elif item.stock_quantity <= 5 %}⚠ {{ item.stock_quantity }} left
+                        {% else %}{{ item.stock_quantity }} in stock{% endif %}
+                    </div>
+                    <div class="add-to-cart-btn"><i class="bi bi-plus"></i></div>
+                </div>
+                {% empty %}
+                <div class="empty-state" style="grid-column:1/-1;">
+                    <i class="bi bi-box"></i>
+                    <h4>No items available</h4>
+                    <p><a href="{% url 'item_create' %}">Add items to inventory</a></p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Right: Cart Panel -->
+        <div class="pos-right">
+            <div class="cart-header">
+                <h2><i class="bi bi-cart3"></i> Cart <div class="cart-badge" id="cartBadge">0</div></h2>
+                <button class="clear-btn" onclick="clearCart()" title="Clear Cart (Esc)">
+                    <i class="bi bi-trash"></i> Clear
+                </button>
+            </div>
+
+            <div class="cart-items" id="cartItems">
+                <div class="cart-empty" id="cartEmpty">
+                    <i class="bi bi-cart3"></i>
+                    <p>Cart is empty</p>
+                    <small>Click items to add them</small>
+                </div>
+            </div>
+
+            <!-- Discount -->
+            <div style="padding: 8px 16px; border-top: 1px solid var(--border-color);">
+                <div class="d-flex align-items-center gap-2">
+                    <label style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">Discount ₹</label>
+                    <input type="number" id="discountInput" min="0" value="0" 
+                           class="form-control form-control-sm" style="max-width:100px;"
+                           oninput="updateSummary()">
+                    <span style="font-size:12px;color:var(--text-muted);">manual</span>
+                </div>
+            </div>
+
+            <!-- Summary -->
+            <div class="cart-summary">
+                <div class="summary-row">
+                    <span class="label">Subtotal</span>
+                    <span class="value" id="subtotalDisplay">₹0.00</span>
+                </div>
+                <div class="summary-row">
+                    <span class="label">Tax</span>
+                    <span class="value" id="taxDisplay">₹0.00</span>
+                </div>
+                <div class="summary-row">
+                    <span class="label">Discount</span>
+                    <span class="value text-success" id="discountDisplay">-₹0.00</span>
+                </div>
+                <div class="summary-row total">
+                    <span class="label">Total</span>
+                    <span class="value" id="totalDisplay">₹0.00</span>
+                </div>
+            </div>
+
+            <!-- Checkout Button -->
+            <div class="cart-actions">
+                <button class="checkout-btn" id="checkoutBtn" onclick="openPaymentModal()" disabled>
+                    <i class="bi bi-credit-card"></i> Checkout (F4)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-credit-card me-2"></i>Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4">
+                <!-- Order Summary -->
+                <div style="background: var(--bg-tertiary); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span style="font-size:13px;color:var(--text-secondary);">Items</span>
+                        <span id="modalItemCount" style="font-size:13px;font-weight:600;"></span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span style="font-size:15px;font-weight:700;">Total Amount</span>
+                        <span id="modalTotal" style="font-size:20px;font-weight:800;color:var(--accent);"></span>
+                    </div>
+                </div>
+
+                <!-- Payment Method -->
+                <label class="form-label">Payment Method</label>
+                <div class="payment-method-grid" id="paymentMethodGrid">
+                    <div class="payment-option selected" data-method="cash">
+                        <i class="bi bi-cash-stack text-success"></i>
+                        <span>Cash</span>
+                    </div>
+                    <div class="payment-option" data-method="card">
+                        <i class="bi bi-credit-card text-info"></i>
+                        <span>Card</span>
+                    </div>
+                    <div class="payment-option" data-method="upi">
+                        <i class="bi bi-phone text-warning"></i>
+                        <span>UPI</span>
+                    </div>
+                    <div class="payment-option" data-method="wallet">
+                        <i class="bi bi-wallet2 text-accent"></i>
+                        <span>Wallet</span>
+                    </div>
+                </div>
+
+                <!-- Cash Amount -->
+                <div id="cashSection">
+                    <label class="form-label">Amount Received (₹)</label>
+                    <input type="number" id="amountPaid" class="form-control mb-2" placeholder="Enter amount" oninput="calcChange()">
+                    
+                    <!-- Numpad -->
+                    <div class="numpad" id="numpad">
+                        {% for n in '789456123' %}
+                        <button class="num-btn" onclick="numpadInput('{{ n }}')">{{ n }}</button>
+                        {% endfor %}
+                        <button class="num-btn" onclick="numpadInput('0')">0</button>
+                        <button class="num-btn" onclick="numpadInput('00')">00</button>
+                        <button class="num-btn" onclick="numpadClear()"><i class="bi bi-backspace"></i></button>
+                    </div>
+
+                    <div id="changeDisplay" class="mt-3 p-3 rounded text-center d-none" style="background: var(--success-light); color: var(--success);">
+                        <strong>Change: <span id="changeAmount">₹0.00</span></strong>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="mt-3">
+                    <label class="form-label">Notes (Optional)</label>
+                    <input type="text" id="orderNotes" class="form-control" placeholder="e.g. Table 5, Employee name...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success fw-bold px-4" id="confirmPaymentBtn" onclick="processPayment()">
+                    <i class="bi bi-check-circle me-1"></i> Confirm Payment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Processing Overlay -->
+<div id="processingOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9999;display:none;align-items:center;justify-content:center;">
+    <div style="text-align:center;color:white;">
+        <div class="spinner-border text-accent mb-3" style="width:50px;height:50px;"></div>
+        <div style="font-size:16px;font-weight:600;">Processing Payment...</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ---- Cart State ----
+let cart = [];
+let selectedCategory = '';
+let selectedPaymentMethod = 'cash';
+
+const CSRF = getCookie('csrftoken');
+
+// ---- Cart Functions ----
+function addToCart(card) {
+    const id = card.dataset.id;
+    const name = card.dataset.name;
+    const price = parseFloat(card.dataset.price);
+    const tax = parseFloat(card.dataset.tax);
+    const stock = parseInt(card.dataset.stock);
+
+    if (stock === 0) { showToast('Out of stock!', 'warning'); return; }
+
+    const existing = cart.find(i => i.id === id);
+    if (existing) {
+        if (existing.quantity >= stock) { showToast('Max stock reached', 'warning'); return; }
+        existing.quantity++;
+    } else {
+        cart.push({ id, name, price, tax, quantity: 1, stock });
+    }
+
+    // Flash animation
+    card.style.transform = 'scale(0.95)';
+    setTimeout(() => card.style.transform = '', 150);
+
+    renderCart();
+    updateSummary();
+}
+
+function removeFromCart(id) {
+    cart = cart.filter(i => i.id !== id);
+    renderCart();
+    updateSummary();
+}
+
+function updateQty(id, delta) {
+    const item = cart.find(i => i.id === id);
+    if (!item) return;
+    item.quantity += delta;
+    if (item.quantity <= 0) { removeFromCart(id); return; }
+    if (item.quantity > item.stock) { item.quantity = item.stock; showToast('Max stock reached', 'warning'); }
+    renderCart();
+    updateSummary();
+}
+
+function clearCart() {
+    cart = [];
+    renderCart();
+    updateSummary();
+}
+
+function renderCart() {
+    const container = document.getElementById('cartItems');
+    const badge = document.getElementById('cartBadge');
+    const checkoutBtn = document.getElementById('checkoutBtn');
+
+    badge.textContent = cart.reduce((s, i) => s + i.quantity, 0);
+
+    if (cart.length === 0) {
+        container.innerHTML = `
+            <div class="cart-empty" id="cartEmpty">
+                <i class="bi bi-cart3"></i>
+                <p>Cart is empty</p>
+                <small>Click items to add them</small>
+            </div>
+        `;
+        checkoutBtn.disabled = true;
+        return;
+    }
+
+    checkoutBtn.disabled = false;
+
+    container.innerHTML = cart.map(item => `
+        <div class="cart-item" id="cart-item-${item.id}">
+            <div style="flex:1;min-width:0;">
+                <div class="cart-item-name">${item.name}</div>
+                <div class="cart-item-price">₹${item.price.toFixed(2)} each${item.tax > 0 ? ` (+${item.tax}% tax)` : ''}</div>
+            </div>
+            <div class="qty-controls">
+                <button class="qty-btn" onclick="updateQty('${item.id}',-1)" title="Decrease">−</button>
+                <span class="qty-display">${item.quantity}</span>
+                <button class="qty-btn" onclick="updateQty('${item.id}',1)" title="Increase">+</button>
+            </div>
+            <div style="text-align:right;min-width:60px;">
+                <div style="font-size:13px;font-weight:700;color:var(--accent);">₹${(item.price * item.quantity).toFixed(2)}</div>
+            </div>
+            <button class="remove-item" onclick="removeFromCart('${item.id}')" title="Remove">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+function updateSummary() {
+    const discount = parseFloat(document.getElementById('discountInput').value) || 0;
+    let subtotal = 0, tax = 0;
+    cart.forEach(i => {
+        const s = i.price * i.quantity;
+        subtotal += s;
+        tax += (s * i.tax) / 100;
+    });
+    const total = Math.max(0, subtotal + tax - discount);
+
+    document.getElementById('subtotalDisplay').textContent = `₹${subtotal.toFixed(2)}`;
+    document.getElementById('taxDisplay').textContent = `₹${tax.toFixed(2)}`;
+    document.getElementById('discountDisplay').textContent = `-₹${discount.toFixed(2)}`;
+    document.getElementById('totalDisplay').textContent = `₹${total.toFixed(2)}`;
+}
+
+// ---- Search & Filter ----
+document.getElementById('itemSearch').addEventListener('input', function() {
+    filterItems(this.value.toLowerCase());
+});
+
+document.querySelectorAll('.cat-pill').forEach(pill => {
+    pill.addEventListener('click', function() {
+        document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+        this.classList.add('active');
+        selectedCategory = this.dataset.category;
+        filterItems(document.getElementById('itemSearch').value.toLowerCase());
+    });
+});
+
+function filterItems(query) {
+    document.querySelectorAll('.item-card').forEach(card => {
+        const name = card.dataset.name.toLowerCase();
+        const barcode = card.dataset.barcode.toLowerCase();
+        const catMatch = !selectedCategory || card.dataset.category === selectedCategory;
+        const searchMatch = !query || name.includes(query) || barcode.includes(query);
+        card.style.display = catMatch && searchMatch ? '' : 'none';
+    });
+}
+
+// ---- Payment Modal ----
+function openPaymentModal() {
+    if (cart.length === 0) return;
+    const discount = parseFloat(document.getElementById('discountInput').value) || 0;
+    let subtotal = 0, tax = 0;
+    cart.forEach(i => {
+        const s = i.price * i.quantity;
+        subtotal += s;
+        tax += (s * i.tax) / 100;
+    });
+    const total = Math.max(0, subtotal + tax - discount);
+    const totalItems = cart.reduce((s, i) => s + i.quantity, 0);
+
+    document.getElementById('modalTotal').textContent = `₹${total.toFixed(2)}`;
+    document.getElementById('modalItemCount').textContent = `${totalItems} item${totalItems !== 1 ? 's' : ''}`;
+    document.getElementById('amountPaid').value = total.toFixed(0);
+    document.getElementById('changeDisplay').classList.add('d-none');
+
+    calcChange();
+    new bootstrap.Modal(document.getElementById('paymentModal')).show();
+}
+
+document.getElementById('paymentMethodGrid').addEventListener('click', function(e) {
+    const option = e.target.closest('.payment-option');
+    if (!option) return;
+    document.querySelectorAll('.payment-option').forEach(o => o.classList.remove('selected'));
+    option.classList.add('selected');
+    selectedPaymentMethod = option.dataset.method;
+    document.getElementById('cashSection').style.display = selectedPaymentMethod === 'cash' ? '' : 'none';
+});
+
+function calcChange() {
+    const discount = parseFloat(document.getElementById('discountInput').value) || 0;
+    let subtotal = 0, tax = 0;
+    cart.forEach(i => {
+        const s = i.price * i.quantity;
+        subtotal += s;
+        tax += (s * i.tax) / 100;
+    });
+    const total = Math.max(0, subtotal + tax - discount);
+    const paid = parseFloat(document.getElementById('amountPaid').value) || 0;
+    const change = paid - total;
+    const changeDiv = document.getElementById('changeDisplay');
+    const changeAmt = document.getElementById('changeAmount');
+    
+    if (paid > 0) {
+        changeDiv.classList.remove('d-none');
+        if (change >= 0) {
+            changeDiv.style.background = 'var(--success-light)';
+            changeDiv.style.color = 'var(--success)';
+            changeAmt.textContent = `₹${change.toFixed(2)}`;
+        } else {
+            changeDiv.style.background = 'var(--danger-light)';
+            changeDiv.style.color = 'var(--danger)';
+            changeAmt.textContent = `Short by ₹${Math.abs(change).toFixed(2)}`;
+        }
+    }
+}
+
+// Numpad
+function numpadInput(val) {
+    const input = document.getElementById('amountPaid');
+    input.value = (input.value || '') + val;
+    calcChange();
+}
+function numpadClear() {
+    const input = document.getElementById('amountPaid');
+    input.value = input.value.slice(0, -1);
+    calcChange();
+}
+
+// ---- Process Payment ----
+async function processPayment() {
+    const discount = parseFloat(document.getElementById('discountInput').value) || 0;
+    let subtotal = 0, tax = 0;
+    cart.forEach(i => {
+        const s = i.price * i.quantity;
+        subtotal += s;
+        tax += (s * i.tax) / 100;
+    });
+    const total = Math.max(0, subtotal + tax - discount);
+    const paid = selectedPaymentMethod === 'cash'
+        ? (parseFloat(document.getElementById('amountPaid').value) || total)
+        : total;
+
+    if (selectedPaymentMethod === 'cash' && paid < total) {
+        showToast('Insufficient payment amount', 'danger');
+        return;
+    }
+
+    const btn = document.getElementById('confirmPaymentBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+
+    const payload = {
+        cart: cart.map(i => ({ id: i.id, quantity: i.quantity })),
+        payment_method: selectedPaymentMethod,
+        amount_paid: paid,
+        discount: discount,
+        notes: document.getElementById('orderNotes').value,
+    };
+
+    try {
+        const res = await fetch('/billing/create-order/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF,
+            },
+            body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('paymentModal'))?.hide();
+            showSuccessFlash(data.order_number, data.total, data.change, data.redirect);
+        } else {
+            showToast(data.error || 'Error processing order', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Confirm Payment';
+        }
+    } catch (e) {
+        showToast('Network error. Please try again.', 'danger');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Confirm Payment';
+    }
+}
+
+function showSuccessFlash(orderNum, total, change, redirect) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML = `
+        <div style="text-align:center;color:white;animation:fadeIn 0.3s ease;">
+            <div style="width:80px;height:80px;background:var(--success);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:36px;animation:pulse 1s ease;">
+                <i class="bi bi-check-lg"></i>
+            </div>
+            <h2 style="font-size:24px;font-weight:800;margin-bottom:8px;">Payment Successful!</h2>
+            <p style="font-size:16px;opacity:0.8;margin-bottom:4px;">Order #${orderNum}</p>
+            <p style="font-size:20px;font-weight:700;color:#22c55e;">₹${total.toFixed(2)}</p>
+            ${change > 0 ? `<p style="font-size:15px;opacity:0.9;margin-top:8px;">Change: ₹${change.toFixed(2)}</p>` : ''}
+            <div style="margin-top:24px;display:flex;gap:12px;justify-content:center;">
+                <button onclick="window.location='${redirect}'" style="background:#6366f1;border:none;color:white;padding:10px 20px;border-radius:8px;font-size:14px;cursor:pointer;">
+                    <i class="bi bi-printer me-1"></i> Print Receipt
+                </button>
+                <button onclick="this.closest('div[style*=fixed]').remove();clearCart();" style="background:#374151;border:none;color:white;padding:10px 20px;border-radius:8px;font-size:14px;cursor:pointer;">
+                    <i class="bi bi-plus me-1"></i> New Order
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    clearCart();
+}
+
+// ---- Toast ----
+function showToast(msg, type = 'info') {
+    const toast = document.createElement('div');
+    toast.style.cssText = `position:fixed;top:20px;right:20px;z-index:99999;min-width:250px;`;
+    toast.innerHTML = `
+        <div class="alert alert-${type} d-flex align-items-center" style="margin:0;">
+            <i class="bi bi-info-circle me-2"></i>${msg}
+        </div>`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// ---- Keyboard Shortcuts ----
+document.addEventListener('keydown', e => {
+    if (e.key === 'F2') { e.preventDefault(); document.getElementById('itemSearch').focus(); }
+    if (e.key === 'F4') { e.preventDefault(); if (cart.length > 0) openPaymentModal(); }
+    if (e.key === 'Escape' && !document.querySelector('.modal.show')) clearCart();
+});
+</script>
+{% endblock %}

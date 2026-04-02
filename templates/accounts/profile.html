@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}My Profile{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card overflow-hidden">
+                <div style="height: 120px; background: linear-gradient(135deg, var(--accent), #8b5cf6);"></div>
+                <div class="card-body position-relative px-4 pb-4">
+                    <div style="margin-top: -60px; margin-bottom: 20px; text-align: center;">
+                        <div style="width:100px;height:100px;background:var(--bg-card);border:4px solid var(--bg-primary);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:40px;color:var(--text-secondary);font-weight:700;">
+                            {{ user.first_name|first|default:user.username|first|upper }}
+                        </div>
+                        <h4 class="mt-2 mb-1" style="font-weight:700;">{{ user.get_full_name|default:user.username }}</h4>
+                        <div class="text-muted" style="font-size:14px;">@{{ user.username }}</div>
+                        <div class="mt-2 text-capitalize">
+                            {% if profile.role == 'admin' %}
+                            <span class="badge bg-danger px-3 py-2">Administrator</span>
+                            {% elif profile.role == 'manager' %}
+                            <span class="badge bg-warning px-3 py-2">Manager</span>
+                            {% else %}
+                            <span class="badge bg-info px-3 py-2">Cashier</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">First Name</label>
+                                <input type="text" name="first_name" class="form-control" value="{{ user.first_name }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Last Name</label>
+                                <input type="text" name="last_name" class="form-control" value="{{ user.last_name }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Email</label>
+                                <input type="email" name="email" class="form-control" value="{{ user.email }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Phone</label>
+                                <input type="text" name="phone" class="form-control" value="{{ profile.phone }}">
+                            </div>
+                            <div class="col-12 mt-4 pt-3 border-top" style="border-color:var(--border-light) !important;">
+                                <h6>Change Password <span class="text-muted" style="font-size:12px;font-weight:normal;">(Leave blank to keep current)</span></h6>
+                                <input type="password" name="password" class="form-control mt-2" placeholder="New Password">
+                            </div>
+                            <div class="col-12 mt-4 text-end">
+                                <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-circle me-1"></i> Save Changes</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

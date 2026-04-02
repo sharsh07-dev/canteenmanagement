@@ -1,0 +1,269 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1><i class="bi bi-speedometer2"></i> Dashboard</h1>
+        <div class="d-flex gap-2">
+            <a href="{% url 'pos' %}" class="btn btn-primary">
+                <i class="bi bi-cash-register"></i> Open POS
+            </a>
+            <a href="{% url 'sales_report' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-graph-up"></i> Reports
+            </a>
+        </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card accent">
+                <div class="stat-icon accent"><i class="bi bi-currency-rupee"></i></div>
+                <div class="stat-value">₹{{ today_revenue|floatformat:0 }}</div>
+                <div class="stat-label">Today's Revenue</div>
+                <div class="stat-change up"><i class="bi bi-arrow-up-short"></i> {{ today_count }} orders today</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card success">
+                <div class="stat-icon success"><i class="bi bi-calendar-week"></i></div>
+                <div class="stat-value">₹{{ week_revenue|floatformat:0 }}</div>
+                <div class="stat-label">This Week</div>
+                <div class="stat-change up"><i class="bi bi-arrow-up-short"></i> Current week</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card warning">
+                <div class="stat-icon warning"><i class="bi bi-calendar-month"></i></div>
+                <div class="stat-value">₹{{ month_revenue|floatformat:0 }}</div>
+                <div class="stat-label">This Month</div>
+                <div class="stat-change up"><i class="bi bi-arrow-up-short"></i> Since month start</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card {% if low_stock_count > 0 %}danger{% else %}info{% endif %}">
+                <div class="stat-icon {% if low_stock_count > 0 %}warning{% else %}info{% endif %}">
+                    <i class="bi bi-exclamation-triangle{% if low_stock_count == 0 %}-fill{% endif %}"></i>
+                </div>
+                <div class="stat-value">{{ low_stock_count }}</div>
+                <div class="stat-label">Low Stock Alerts</div>
+                <div class="stat-change {% if low_stock_count > 0 %}down{% else %}up{% endif %}">
+                    <i class="bi bi-box-seam"></i> {{ total_items }} total items
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-8">
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="bi bi-graph-up me-2 text-accent"></i>Revenue (Last 7 Days)</span>
+                    <a href="{% url 'sales_report' %}" class="btn btn-sm btn-outline-secondary">View All</a>
+                </div>
+                <div class="card-body">
+                    <canvas id="revenueChart" height="90"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <span><i class="bi bi-pie-chart me-2 text-accent"></i>Category Mix</span>
+                </div>
+                <div class="card-body d-flex align-items-center justify-content-center">
+                    <canvas id="categoryChart" style="max-height: 200px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Row -->
+    <div class="row g-3">
+        <!-- Recent Orders -->
+        <div class="col-xl-7">
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="bi bi-receipt me-2 text-accent"></i>Recent Orders</span>
+                    <a href="{% url 'order_list' %}" class="btn btn-sm btn-outline-secondary">View All</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Order #</th>
+                                <th>Cashier</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in recent_orders %}
+                            <tr onclick="window.location='{% url 'order_detail' order.id %}'" style="cursor:pointer;">
+                                <td><strong>#{{ order.order_number }}</strong></td>
+                                <td>{{ order.cashier.username }}</td>
+                                <td class="text-accent fw-bold">₹{{ order.total_amount }}</td>
+                                <td>
+                                    <span class="status-badge status-{{ order.status }}">
+                                        <i class="bi bi-circle-fill" style="font-size:7px;"></i>
+                                        {{ order.get_status_display }}
+                                    </span>
+                                </td>
+                                <td class="text-muted">{{ order.created_at|timesince }} ago</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5">
+                                    <div class="empty-state py-4">
+                                        <i class="bi bi-receipt"></i>
+                                        <p>No orders yet. <a href="{% url 'pos' %}">Start billing!</a></p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Low Stock & Top Items -->
+        <div class="col-xl-5">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <span><i class="bi bi-exclamation-triangle me-2 text-warning"></i>Low Stock Alerts</span>
+                    <a href="{% url 'item_list' %}?stock=low" class="btn btn-sm btn-outline-secondary">Manage</a>
+                </div>
+                <div class="card-body p-0">
+                    {% for item in low_stock_items %}
+                    <div class="d-flex align-items-center justify-content-between px-4 py-3 border-bottom" style="border-color: var(--border-light) !important;">
+                        <div>
+                            <div class="fw-semibold" style="font-size:13px;">{{ item.name }}</div>
+                            <div class="text-muted" style="font-size:12px;">{{ item.category.name }}</div>
+                        </div>
+                        <span class="stock-indicator {% if item.stock_quantity == 0 %}out{% else %}low{% endif %}">
+                            <i class="bi bi-box"></i>
+                            {{ item.stock_quantity }} left
+                        </span>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4 text-muted" style="font-size:13px;">
+                        <i class="bi bi-check-circle text-success" style="font-size:24px;"></i>
+                        <p class="mt-2">All items well stocked!</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="bi bi-trophy me-2 text-warning"></i>Top Selling Items</span>
+                </div>
+                <div class="card-body p-0">
+                    {% for item in top_items %}
+                    <div class="d-flex align-items-center justify-content-between px-4 py-3 border-bottom" style="border-color: var(--border-light) !important;">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rank-badge" style="width:28px;height:28px;background:var(--accent-light);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent);">
+                                {{ forloop.counter }}
+                            </div>
+                            <div>
+                                <div class="fw-semibold" style="font-size:13px;">{{ item.item__name }}</div>
+                                <div class="text-muted" style="font-size:12px;">{{ item.item__category__name }}</div>
+                            </div>
+                        </div>
+                        <span class="badge bg-success bg-opacity-10 text-success">{{ item.total_qty }} sold</span>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4 text-muted" style="font-size:13px;">No sales data yet.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const chartLabels = {{ chart_labels|safe }};
+const chartData = {{ chart_data|safe }};
+const categoryData = {{ category_data|safe }};
+
+// Revenue Chart
+const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+new Chart(revenueCtx, {
+    type: 'bar',
+    data: {
+        labels: chartLabels,
+        datasets: [{
+            label: 'Revenue (₹)',
+            data: chartData,
+            backgroundColor: 'rgba(99, 102, 241, 0.3)',
+            borderColor: 'rgba(99, 102, 241, 1)',
+            borderWidth: 2,
+            borderRadius: 6,
+            borderSkipped: false,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: ctx => '₹' + ctx.raw.toLocaleString('en-IN')
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: { color: '#8b949e', callback: v => '₹' + v.toLocaleString('en-IN') }
+            },
+            x: {
+                grid: { display: false },
+                ticks: { color: '#8b949e' }
+            }
+        }
+    }
+});
+
+// Category Chart
+const catCtx = document.getElementById('categoryChart').getContext('2d');
+if (categoryData.length > 0) {
+    new Chart(catCtx, {
+        type: 'doughnut',
+        data: {
+            labels: categoryData.map(c => c.name),
+            datasets: [{
+                data: categoryData.map(c => c.item_count),
+                backgroundColor: categoryData.map(c => c.color || '#6366f1'),
+                borderWidth: 2,
+                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-card') || '#1a1f2e',
+            }]
+        },
+        options: {
+            responsive: true,
+            cutout: '65%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#8b949e',
+                        boxWidth: 12,
+                        padding: 12,
+                        font: { size: 11 }
+                    }
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

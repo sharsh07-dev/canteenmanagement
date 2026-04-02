@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block title %}Order Details #{{ order.order_number }}{% endblock %}
+{% block page_title %}Order Details{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="page-header">
+        <h1><i class="bi bi-receipt"></i> Order #{{ order.order_number }}</h1>
+        <div class="d-flex gap-2">
+            <a href="{% url 'receipt' order.id %}" target="_blank" class="btn btn-outline-primary">
+                <i class="bi bi-printer"></i> Print Receipt
+            </a>
+            <a href="{% url 'order_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Orders
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-8">
+            <div class="card h-100">
+                <div class="card-header">
+                    <span>Order Items</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-end">Price</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in order.items.all %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold">{{ item.item.name }}</div>
+                                    <small class="text-muted">{{ item.item.category.name }}</small>
+                                </td>
+                                <td class="text-center">{{ item.quantity }}</td>
+                                <td class="text-end">₹{{ item.unit_price }}</td>
+                                <td class="text-end fw-bold">₹{% widthratio item.quantity 1 item.unit_price %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <span>Summary</span>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Subtotal</span>
+                        <span>₹{{ order.subtotal }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Tax</span>
+                        <span>₹{{ order.tax_amount }}</span>
+                    </div>
+                    {% if order.discount_amount > 0 %}
+                    <div class="d-flex justify-content-between mb-2 text-success">
+                        <span>Discount</span>
+                        <span>-₹{{ order.discount_amount }}</span>
+                    </div>
+                    {% endif %}
+                    <hr>
+                    <div class="d-flex justify-content-between fs-5 fw-bold text-primary">
+                        <span>Total</span>
+                        <span>₹{{ order.total_amount }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted d-block text-uppercase" style="font-size:10px;font-weight:700;">Status</small>
+                        <span class="status-badge status-{{ order.status }}">
+                            <i class="bi bi-circle-fill" style="font-size:8px;"></i>
+                            {{ order.status|title }}
+                        </span>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted d-block text-uppercase" style="font-size:10px;font-weight:700;">Payment Method</small>
+                        <span class="text-capitalize">{{ order.payment.method|default:'Cash' }}</span>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted d-block text-uppercase" style="font-size:10px;font-weight:700;">Cashier</small>
+                        <span>{{ order.cashier.username }}</span>
+                    </div>
+                    <div>
+                        <small class="text-muted d-block text-uppercase" style="font-size:10px;font-weight:700;">Date/Time</small>
+                        <span>{{ order.created_at|date:"M d, Y" }} <span class="text-muted text-sm">{{ order.created_at|date:"h:i A" }}</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

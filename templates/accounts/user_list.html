@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% block title %}Users{% endblock %}
+{% block page_title %}Users{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="page-header">
+        <h1><i class="bi bi-people"></i> Manage Users</h1>
+        <a href="{% url 'user_create' %}" class="btn btn-primary"><i class="bi bi-person-plus"></i> Add User</a>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span><i class="bi bi-people me-2"></i>System Users</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                <div style="width:36px;height:36px;background:var(--accent-light);color:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;">
+                                    {{ u.first_name|first|default:u.username|first|upper }}
+                                </div>
+                                <div>
+                                    <div class="fw-bold">{{ u.get_full_name|default:u.username }}</div>
+                                    <div class="text-muted" style="font-size:12px;">@{{ u.username }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if u.profile.role == 'admin' %}
+                            <span class="badge bg-danger">Admin</span>
+                            {% elif u.profile.role == 'manager' %}
+                            <span class="badge bg-warning">Manager</span>
+                            {% else %}
+                            <span class="badge bg-info">Cashier</span>
+                            {% endif %}
+                            {% if u.is_superuser %}
+                            <span class="badge border border-danger text-danger bg-transparent" title="Django Superuser"><i class="bi bi-star-fill"></i></span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted">{{ u.email|default:"-" }}</td>
+                        <td class="text-muted">{{ u.profile.phone|default:"-" }}</td>
+                        <td>
+                            {% if u.is_active %}
+                            <span class="status-badge status-completed">Active</span>
+                            {% else %}
+                            <span class="status-badge status-cancelled">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <a href="{% url 'user_edit' u.id %}" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% if u != request.user %}
+                                <form method="post" action="{% url 'user_delete' u.id %}" onsubmit="return confirm('Deactivate this user?')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Deactivate">
+                                        <i class="bi bi-person-x"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">No users found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
