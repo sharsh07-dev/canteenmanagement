@@ -1,0 +1,14 @@
+{
+    "builds": [
+        {
+            "src": "canteen/wsgi.py",
+            "use": "@vercel/python"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "canteen/wsgi.py"
+        }
+    ]
+}
