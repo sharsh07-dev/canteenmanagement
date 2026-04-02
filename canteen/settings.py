@@ -129,5 +129,10 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 AUTH_USER_MODEL = 'auth.User'
 
 # Session settings
+if 'VERCEL' in os.environ or os.environ.get('VERCEL_URL'):
+    SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
+else:
+    SESSION_ENGINE = "django.contrib.sessions.backends.db"
+    
 SESSION_COOKIE_AGE = 86400  # 24 hours
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
